@@ -1,4 +1,7 @@
 import logging
+import os
+import datetime
+import sys
 
 from aiogram import Bot, Dispatcher, types
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
@@ -7,7 +10,37 @@ from aiogram.types import ContentType, ChatType, Message
 import settings
 from models.video_note_info import VideoNoteInfo
 
-logging.basicConfig(level=logging.INFO)
+# LOGGING ---------
+
+logger = logging.getLogger(__name__)
+
+
+def log_uncaught_exceptions(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+os.makedirs(settings.LOGGING_DIRECTORY, exist_ok=True)
+
+logging_filename = os.path.join(
+    settings.LOGGING_DIRECTORY,
+    datetime.datetime.now().strftime(
+        settings.LOGGING_FILENAME_FORMAT
+    )
+)
+
+logging.basicConfig(
+    level=settings.LOGGING_LEVEL,
+    format=settings.LOGGING_FORMAT,
+    filename=logging_filename,
+    filemode='a'
+)
+
+sys.excepthook = log_uncaught_exceptions
+
+# -----------------
 
 bot = Bot(token=settings.BOT_TOKEN)
 dp = Dispatcher(bot)
