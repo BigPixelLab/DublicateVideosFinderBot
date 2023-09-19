@@ -1,11 +1,13 @@
+import asyncio
 import logging
 import os
 import datetime
 import sys
 
 from aiogram import Bot, Dispatcher, types
-from aiogram.contrib.middlewares.logging import LoggingMiddleware
-from aiogram.types import ContentType, ChatType, Message
+from aiogram.enums import ChatType, ContentType
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import Message
 
 import settings
 from models.video_note_info import VideoNoteInfo
@@ -20,6 +22,7 @@ def log_uncaught_exceptions(exc_type, exc_value, exc_traceback):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+    print(exc_type, exc_value, exc_traceback, file=sys.stderr)
 
 
 os.makedirs(settings.LOGGING_DIRECTORY, exist_ok=True)
@@ -43,8 +46,7 @@ sys.excepthook = log_uncaught_exceptions
 # -----------------
 
 bot = Bot(token=settings.BOT_TOKEN)
-dp = Dispatcher(bot)
-dp.middleware.setup(LoggingMiddleware())
+dp = Dispatcher(storage=MemoryStorage())
 
 
 def get_message_link(message: Message):
@@ -63,8 +65,12 @@ def get_message_link(message: Message):
     return f'https://t.me/c/{message.chat.shifted_id}/{message.message_id}'
 
 
-@dp.message_handler(content_types=ContentType.VIDEO_NOTE)
 async def handle_circle_message(message: types.Message):
+
+    # Обрабатываем только видео-заметки
+    if message.content_type != ContentType.VIDEO_NOTE:
+        return
+
     video_note_id = message.video_note.file_unique_id
 
     logging.info(f'Got video note with id: {video_note_id}')
@@ -86,7 +92,7 @@ async def handle_circle_message(message: types.Message):
         message.video_note.file_unique_id,
         message.chat.id,
         message.message_id,
-        message.from_user.username
+        ''
     )
     vni.create()
 
@@ -101,7 +107,8 @@ async def handle_circle_message(message: types.Message):
 
 
 if __name__ == '__main__':
-    from aiogram import executor
+    dp.channel_post.register(handle_circle_message)
+    dp.message.register(handle_circle_message)
 
     VideoNoteInfo.init()
-    executor.start_polling(dp, skip_updates=True)
+    asyncio.run(dp.start_polling(bot))
