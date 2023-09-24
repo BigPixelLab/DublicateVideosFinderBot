@@ -4,11 +4,6 @@ import os
 import datetime
 import sys
 
-from aiogram import Bot, Dispatcher, types
-from aiogram.enums import ChatType, ContentType
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Message
-
 import settings
 from models.video_note_info import VideoNoteInfo
 
@@ -42,6 +37,15 @@ logging.basicConfig(
 )
 
 sys.excepthook = log_uncaught_exceptions
+
+import aiogram
+
+logger.info(f'AIOGRAM VERSION: {aiogram.__version__}')
+
+from aiogram import Bot, Dispatcher, types
+from aiogram.enums import ChatType, ContentType
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import Message
 
 # -----------------
 
