@@ -79,6 +79,7 @@ async def handle_circle_message(message: types.Message):
         await message.answer(
             'Данный бот не предназначен для личной переписки.'
         )
+        return
 
     video_note_id = message.video_note.file_unique_id
 
