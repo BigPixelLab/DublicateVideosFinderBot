@@ -106,14 +106,14 @@ async def handle_circle_message(message: types.Message):
     )
     vni.create()
 
-    await bot.send_message(
-        settings.USER_TO_NOTIFY,
-        f"""
-🆕 <b>Видео-сообщение добавлено.</b>
-<a href="{get_message_link(message)}">👉 видео</a>
-        """,
-        parse_mode='HTML'
-    )
+#     await bot.send_message(
+#         settings.USER_TO_NOTIFY,
+#         f"""
+# 🆕 <b>Видео-сообщение добавлено.</b>
+# <a href="{get_message_link(message)}">👉 видео</a>
+#         """,
+#         parse_mode='HTML'
+#     )
 
 
 if __name__ == '__main__':
