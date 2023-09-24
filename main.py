@@ -75,6 +75,11 @@ async def handle_circle_message(message: types.Message):
     if message.content_type != ContentType.VIDEO_NOTE:
         return
 
+    if message.chat.type == ChatType.PRIVATE:
+        await message.answer(
+            'Данный бот не предназначен для личной переписки.'
+        )
+
     video_note_id = message.video_note.file_unique_id
 
     logging.info(f'Got video note with id: {video_note_id}')
