@@ -4,8 +4,10 @@ import os
 import datetime
 import sys
 
+from aiogram.exceptions import AiogramError
+
 import settings
-from models.video_note_info import VideoNoteInfo
+from models.video_note_info import VideoNotes
 
 # LOGGING ---------
 
@@ -17,7 +19,7 @@ def log_uncaught_exceptions(exc_type, exc_value, exc_traceback):
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
         return
     logger.error("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-    print(exc_type, exc_value, exc_traceback, file=sys.stderr)
+    print(exc_type, exc_value, exc_traceback)
 
 
 os.makedirs(settings.LOGGING_DIRECTORY, exist_ok=True)
@@ -53,7 +55,13 @@ bot = Bot(token=settings.BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 
+def log(message: str):
+    logger.info(message)
+    print(message)
+
+
 def get_message_link(message: Message):
+
     # Приватный чат с пользователем (не возможно сформировать ссылку)
     if message.chat.type == ChatType.PRIVATE:
         return ''
@@ -69,56 +77,69 @@ def get_message_link(message: Message):
     return f'https://t.me/c/{message.chat.shifted_id}/{message.message_id}'
 
 
+async def get_admin_ids(chat_id: int) -> list[int]:
+    members = await bot.get_chat_administrators(chat_id)
+    return [
+        member.user.id
+        for member in members
+    ]
+
+
+async def handle_new_video_note(message: Message):
+    log(f'Saved to database')
+
+    vni = VideoNotes(message.video_note.file_unique_id)
+    vni.create()
+
+
+async def handle_duplicate_video_note(message: Message):
+    log(f'Found duplicate video')
+
+    admins = get_admin_ids(message.chat.id)
+
+    for admin in await admins:
+        try:
+            await message.forward(admin)
+            await bot.send_message(
+                admin,
+                '⚠ <b>Видео-сообщение отправлено повторно.</b>\n'
+                f'<a href="tg://user?id={message.from_user.id}">🙈 ОТПРАВИТЕЛЬ</a>',
+                parse_mode='HTML'
+            )
+
+            log(f'Sent notification to {admin}')
+
+        except AiogramError:
+            log(f'Unable to send notification to {admin}')
+
+    if not admins:
+        log(f'No admins found in {message.chat.id}')
+
+
 async def handle_circle_message(message: types.Message):
 
     # Обрабатываем только видео-заметки
     if message.content_type != ContentType.VIDEO_NOTE:
+        await message.answer('Данный бот не предназначен для личной переписки.')
         return
 
     if message.chat.type == ChatType.PRIVATE:
-        await message.answer(
-            'Данный бот не предназначен для личной переписки.'
-        )
+        await message.answer('Данный бот не предназначен для личной переписки.')
         return
 
     video_note_id = message.video_note.file_unique_id
 
-    logging.info(f'Got video note with id: {video_note_id}')
+    log(f'Got video note with id: {video_note_id}')
 
-    if VideoNoteInfo.get(video_note_id):
-        await bot.send_message(
-            settings.USER_TO_NOTIFY,
-            f"""
-⚠ <b>Видео-сообщение отправлено повторно.</b>
-<a href="{get_message_link(message)}">👉 видео</a>
-            """,
-            parse_mode='HTML'
-        )
-
+    if VideoNotes.contains(video_note_id):
+        await handle_duplicate_video_note(message)
         return
 
-    vni = VideoNoteInfo(
-        message.video_note.file_id,
-        message.video_note.file_unique_id,
-        message.chat.id,
-        message.message_id,
-        ''
-    )
-    vni.create()
-
-#     await bot.send_message(
-#         settings.USER_TO_NOTIFY,
-#         f"""
-# 🆕 <b>Видео-сообщение добавлено.</b>
-# <a href="{get_message_link(message)}">👉 видео</a>
-#         """,
-#         parse_mode='HTML'
-#     )
+    await handle_new_video_note(message)
 
 
 if __name__ == '__main__':
-    dp.channel_post.register(handle_circle_message)
     dp.message.register(handle_circle_message)
 
-    VideoNoteInfo.init()
+    VideoNotes.init()
     asyncio.run(dp.start_polling(bot))

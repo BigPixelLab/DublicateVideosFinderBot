@@ -11,7 +11,6 @@ def get_environ(var: str, err_msg: str):
 
 BOT_TOKEN = get_environ('TOKEN', 'No bot token specified')
 VIDEO_NOTE_DATABASE_PATH = get_environ('VN_DB_PATH', 'No database path specified')
-USER_TO_NOTIFY = get_environ('OWNER', 'No owner specified')
 
 LOGGING_LEVEL = logging.INFO
 LOGGING_DIRECTORY = get_environ('LOGGING_DIRECTORY', 'No logging directory specified')
