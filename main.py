@@ -119,7 +119,6 @@ async def handle_circle_message(message: types.Message):
 
     # Обрабатываем только видео-заметки
     if message.content_type != ContentType.VIDEO_NOTE:
-        await message.answer('Данный бот не предназначен для личной переписки.')
         return
 
     if message.chat.type == message.from_user.id == message.chat.id:
