@@ -45,9 +45,8 @@ import aiogram
 logger.info(f'AIOGRAM VERSION: {aiogram.__version__}')
 
 from aiogram import Bot, Dispatcher, types
-from aiogram.enums import ChatType, ContentType
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Message
+from aiogram.types import Message, ContentType
 
 # -----------------
 
@@ -63,7 +62,7 @@ def log(message: str):
 def get_message_link(message: Message):
 
     # Приватный чат с пользователем (не возможно сформировать ссылку)
-    if message.chat.type == ChatType.PRIVATE:
+    if message.chat.type == message.from_user.id == message.chat.id:
         return ''
 
     # Публичная группа
@@ -99,7 +98,7 @@ async def handle_duplicate_video_note(message: Message):
 
     for admin in await admins:
         try:
-            await message.forward(admin)
+            await bot.forward_message(admin, message.chat.id, message.message_id)
             await bot.send_message(
                 admin,
                 '⚠ <b>Видео-сообщение отправлено повторно.</b>\n'
@@ -123,7 +122,7 @@ async def handle_circle_message(message: types.Message):
         await message.answer('Данный бот не предназначен для личной переписки.')
         return
 
-    if message.chat.type == ChatType.PRIVATE:
+    if message.chat.type == message.from_user.id == message.chat.id:
         await message.answer('Данный бот не предназначен для личной переписки.')
         return
 
